@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, Loader2, CheckCircle2, AlertCircle, Image as ImageIcon, Camera } from 'lucide-react';
+import { Upload, X, Loader2, CheckCircle2, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -66,7 +66,6 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
 
   // Track blob URLs for cleanup on unmount
   const blobUrlsRef = useRef<Set<string>>(new Set());
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const createItem = useCreateItem();
   const bulkCreateItems = useBulkCreateItems();
@@ -92,18 +91,6 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
     }
   }, []);
 
-  // Camera capture handler
-  const handleCameraCapture = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onDropSingle([file]);
-    }
-    // Reset input so the same file can be re-selected
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
-  }, [onDropSingle]);
-
   // Bulk file drop handler
   const onDropBulk = useCallback((acceptedFiles: File[]) => {
     const newFiles: FileWithPreview[] = acceptedFiles.map((file) => {
@@ -124,19 +111,14 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
 
   const { getRootProps: getSingleRootProps, getInputProps: getSingleInputProps, isDragActive: isSingleDragActive } = useDropzone({
     onDrop: onDropSingle,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif'],
-    },
+    accept: { 'image/*': [] },
     maxFiles: 1,
     multiple: false,
   });
 
   const { getRootProps: getBulkRootProps, getInputProps: getBulkInputProps, isDragActive: isBulkDragActive } = useDropzone({
     onDrop: onDropBulk,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif'],
-    },
-    // maxFiles: 20,
+    accept: { 'image/*': [] },
     multiple: true,
   });
 
@@ -278,29 +260,12 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
                     <p className="mt-2 text-sm text-muted-foreground">
                       {isSingleDragActive
                         ? 'Drop the image here...'
-                        : 'Drag & drop an image, or tap to select'}
+                        : 'Tap to take a photo or choose from library'}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       JPEG, PNG, WebP, or HEIC
                     </p>
                   </div>
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleCameraCapture}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => cameraInputRef.current?.click()}
-                  >
-                    <Camera className="mr-2 h-4 w-4" />
-                    Take Photo
-                  </Button>
                 </div>
               ) : (
                 <div className="relative">
