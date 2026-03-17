@@ -77,3 +77,26 @@ export function getWornAgoColorClass(dateStr: string, timezone: string = 'UTC'):
   if (days <= 30) return 'text-muted-foreground';
   return 'text-muted-foreground/60';
 }
+
+/**
+ * Convert Celsius to Fahrenheit.
+ */
+export function cToF(c: number): number {
+  return Math.round(c * 9 / 5 + 32);
+}
+
+/**
+ * Convert Fahrenheit to Celsius.
+ */
+export function fToC(f: number): number {
+  return Math.round((f - 32) * 5 / 9);
+}
+
+/**
+ * Display a temperature value in the user's preferred unit.
+ * Backend always stores Celsius — this converts for display.
+ */
+export function displayTemp(celsius: number, unit: 'C' | 'F' = 'C'): string {
+  const value = unit === 'F' ? cToF(celsius) : Math.round(celsius);
+  return `${value}°${unit}`;
+}

@@ -106,6 +106,7 @@ export interface Preferences {
   layering_preference: 'minimal' | 'moderate' | 'heavy';
   avoid_repeat_days: number;
   prefer_underused_items: boolean;
+  temperature_unit: 'C' | 'F';
   variety_level: 'low' | 'moderate' | 'high';
   ai_endpoints: AIEndpoint[];
 }

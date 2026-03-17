@@ -44,7 +44,7 @@ import { api, ApiError, setAccessToken } from '@/lib/api';
 import { OCCASIONS, Outfit, SuggestRequest } from '@/lib/types';
 import { useWeather, Weather } from '@/lib/hooks/use-weather';
 import { usePreferences } from '@/lib/hooks/use-preferences';
-import { cn } from '@/lib/utils';
+import { cn, displayTemp, cToF } from '@/lib/utils';
 
 // Map occasion values to icons and colors
 const OCCASION_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
@@ -93,7 +93,7 @@ interface WeatherOverride {
   condition: 'sunny' | 'cloudy' | 'rainy';
 }
 
-function WeatherCard({ weather, isLoading }: { weather?: Weather; isLoading: boolean }) {
+function WeatherCard({ weather, isLoading, tempUnit = 'C' }: { weather?: Weather; isLoading: boolean; tempUnit?: 'C' | 'F' }) {
   if (isLoading) {
     return (
       <Card className="border-muted">
@@ -140,8 +140,7 @@ function WeatherCard({ weather, isLoading }: { weather?: Weather; isLoading: boo
             </div>
             <div>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tracking-tight">{Math.round(weather.temperature)}</span>
-                <span className="text-lg text-muted-foreground">°C</span>
+                <span className="text-4xl font-semibold tracking-tight">{displayTemp(weather.temperature, tempUnit)}</span>
               </div>
               <p className="text-sm text-muted-foreground capitalize">{weather.condition}</p>
             </div>
@@ -149,7 +148,7 @@ function WeatherCard({ weather, isLoading }: { weather?: Weather; isLoading: boo
           <div className="text-right text-sm text-muted-foreground space-y-1">
             <div className="flex items-center gap-1.5 justify-end">
               <Thermometer className="h-3.5 w-3.5" />
-              <span>Feels {Math.round(weather.feels_like)}°</span>
+              <span>Feels {displayTemp(weather.feels_like, tempUnit)}</span>
             </div>
             <div className="flex items-center gap-1.5 justify-end">
               <Droplets className="h-3.5 w-3.5" />
@@ -206,9 +205,11 @@ function OccasionChips({
 function WeatherOverrideSection({
   weather,
   onChange,
+  tempUnit = 'C',
 }: {
   weather: WeatherOverride | null;
   onChange: (weather: WeatherOverride | null) => void;
+  tempUnit?: 'C' | 'F';
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const conditions = [
@@ -225,7 +226,7 @@ function WeatherOverrideSection({
           <span>{weather ? 'Weather override active' : 'Override weather'}</span>
           {weather && (
             <Badge variant="secondary" className="text-xs">
-              {weather.condition} {weather.temperature}°C
+              {weather.condition} {displayTemp(weather.temperature, tempUnit)}
             </Badge>
           )}
         </button>
@@ -275,7 +276,7 @@ function WeatherOverrideSection({
                 }
                 className="flex-1 accent-primary"
               />
-              <span className="text-sm font-medium w-12 text-right">{weather.temperature}°C</span>
+              <span className="text-sm font-medium w-12 text-right">{displayTemp(weather.temperature, tempUnit)}</span>
             </div>
           )}
         </div>
@@ -291,6 +292,7 @@ function OutfitResult({
   onReject,
   onTryAnother,
   onNewRequest,
+  tempUnit = 'C',
 }: {
   outfit: Outfit;
   occasion: string;
@@ -298,6 +300,7 @@ function OutfitResult({
   onReject: () => void;
   onTryAnother: () => void;
   onNewRequest: () => void;
+  tempUnit?: 'C' | 'F';
 }) {
   return (
     <div className="space-y-6">
@@ -316,8 +319,8 @@ function OutfitResult({
         <div className="flex items-center gap-4 text-sm text-muted-foreground p-3 rounded-lg bg-muted/50">
           <div className="flex items-center gap-1.5">
             <Thermometer className="h-4 w-4" />
-            <span>{outfit.weather.temperature}°C</span>
-            <span className="text-xs opacity-70">(feels {outfit.weather.feels_like}°)</span>
+            <span>{displayTemp(outfit.weather.temperature, tempUnit)}</span>
+            <span className="text-xs opacity-70">(feels {displayTemp(outfit.weather.feels_like, tempUnit)})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Droplets className="h-4 w-4" />
@@ -419,6 +422,7 @@ export default function SuggestPage() {
   const { data: session } = useSession();
   const { data: weather, isLoading: weatherLoading } = useWeather();
   const { data: prefs } = usePreferences();
+  const tempUnit = (prefs?.temperature_unit || 'C') as 'C' | 'F';
   const [selectedOccasion, setSelectedOccasion] = useState<string | null>(null);
   const [occasionInitialized, setOccasionInitialized] = useState(false);
   const [weatherOverride, setWeatherOverride] = useState<WeatherOverride | null>(null);
@@ -536,7 +540,7 @@ export default function SuggestPage() {
       {!outfit ? (
         <div className="space-y-6">
           {/* Weather context */}
-          <WeatherCard weather={weather} isLoading={weatherLoading} />
+          <WeatherCard weather={weather} isLoading={weatherLoading} tempUnit={tempUnit} />
 
           {/* Main selection card */}
           <Card>
@@ -554,6 +558,7 @@ export default function SuggestPage() {
               <WeatherOverrideSection
                 weather={weatherOverride}
                 onChange={setWeatherOverride}
+                tempUnit={tempUnit}
               />
 
               {/* Generate button */}
@@ -588,6 +593,7 @@ export default function SuggestPage() {
           onReject={handleReject}
           onTryAnother={handleTryAnother}
           onNewRequest={handleNewRequest}
+          tempUnit={tempUnit}
         />
       )}
     </div>

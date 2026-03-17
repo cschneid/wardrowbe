@@ -38,6 +38,9 @@ class UserPreference(Base):
     hot_threshold: Mapped[int] = mapped_column(Integer, default=25)
     layering_preference: Mapped[str] = mapped_column(String(20), default="moderate")
 
+    # Display
+    temperature_unit: Mapped[str] = mapped_column(String(1), default="C")
+
     # Recommendation settings
     avoid_repeat_days: Mapped[int] = mapped_column(Integer, default=7)
     prefer_underused_items: Mapped[bool] = mapped_column(Boolean, default=True)

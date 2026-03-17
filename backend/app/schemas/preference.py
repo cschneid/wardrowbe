@@ -50,6 +50,13 @@ class PreferenceBase(BaseModel):
         description="Layering preference",
     )
 
+    # Display
+    temperature_unit: str = Field(
+        default="C",
+        pattern="^(C|F)$",
+        description="Temperature display unit (C or F)",
+    )
+
     # Recommendation settings
     avoid_repeat_days: int = Field(
         default=7, ge=0, le=30, description="Days before repeating items"
@@ -81,6 +88,7 @@ class PreferenceUpdate(BaseModel):
     cold_threshold: int | None = Field(default=None, ge=-20, le=30)
     hot_threshold: int | None = Field(default=None, ge=10, le=45)
     layering_preference: str | None = Field(default=None, pattern="^(minimal|moderate|heavy)$")
+    temperature_unit: str | None = Field(default=None, pattern="^(C|F)$")
     avoid_repeat_days: int | None = Field(default=None, ge=0, le=30)
     prefer_underused_items: bool | None = None
     variety_level: str | None = Field(default=None, pattern="^(low|moderate|high)$")

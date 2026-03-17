@@ -21,6 +21,7 @@ import { usePreferences, useUpdatePreferences, useResetPreferences, useTestAIEnd
 import { useUserProfile, useUpdateUserProfile } from '@/lib/hooks/use-user';
 import { CLOTHING_COLORS, OCCASIONS, Preferences, StyleProfile, AIEndpoint } from '@/lib/types';
 import { toast } from 'sonner';
+import { cToF, fToC, displayTemp } from '@/lib/utils';
 
 const CM_TO_IN = 0.393701;
 const IN_TO_CM = 2.54;
@@ -737,6 +738,21 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
+                <Label>Temperature Unit</Label>
+                <Select
+                  value={formData.temperature_unit || 'C'}
+                  onValueChange={(v) => updateField('temperature_unit', v as 'C' | 'F')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="C">Celsius (°C)</SelectItem>
+                    <SelectItem value="F">Fahrenheit (°F)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Temperature Sensitivity</Label>
                 <Select
                   value={formData.temperature_sensitivity || 'normal'}
@@ -754,6 +770,8 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Layering Preference</Label>
                 <Select
@@ -775,7 +793,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Cold Threshold (°C)</Label>
+                <Label>Cold Threshold ({formData.temperature_unit === 'F' ? displayTemp(formData.cold_threshold ?? 10, 'F') : `${formData.cold_threshold ?? 10}°C`})</Label>
                 <Input
                   type="number"
                   value={formData.cold_threshold ?? 10}
@@ -783,9 +801,10 @@ export default function SettingsPage() {
                   min={-20}
                   max={30}
                 />
+                <p className="text-xs text-muted-foreground">Value in °C (used internally)</p>
               </div>
               <div className="space-y-2">
-                <Label>Hot Threshold (°C)</Label>
+                <Label>Hot Threshold ({formData.temperature_unit === 'F' ? displayTemp(formData.hot_threshold ?? 25, 'F') : `${formData.hot_threshold ?? 25}°C`})</Label>
                 <Input
                   type="number"
                   value={formData.hot_threshold ?? 25}
@@ -793,6 +812,7 @@ export default function SettingsPage() {
                   min={10}
                   max={45}
                 />
+                <p className="text-xs text-muted-foreground">Value in °C (used internally)</p>
               </div>
             </div>
           </CardContent>
