@@ -60,6 +60,64 @@ const DevCredentialsProvider = CredentialsProvider({
     };
   },
 });
+
+// Local credentials provider - email/password authentication
+const LocalCredentialsProvider = CredentialsProvider({
+  id: 'local-credentials',
+  name: 'Local Login',
+  credentials: {
+    email: { label: 'Email', type: 'email' },
+    password: { label: 'Password', type: 'password' },
+    displayName: { label: 'Display Name', type: 'text' },
+    action: { label: 'Action', type: 'text' },
+  },
+  async authorize(credentials) {
+    if (!credentials?.email || !credentials?.password) {
+      return null;
+    }
+
+    const apiUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000';
+    const isRegister = credentials.action === 'register';
+    const endpoint = isRegister ? '/api/v1/auth/local/register' : '/api/v1/auth/local/login';
+
+    const body: Record<string, string> = {
+      email: credentials.email,
+      password: credentials.password,
+    };
+    if (isRegister) {
+      body.display_name = credentials.displayName || credentials.email.split('@')[0];
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Authentication failed');
+      }
+
+      const data = await response.json();
+      return {
+        id: data.id,
+        email: data.email,
+        name: data.display_name,
+        image: null,
+        // Attach backend data so JWT callback can use it directly
+        accessToken: data.access_token,
+        isNewUser: data.is_new_user,
+        onboardingCompleted: data.onboarding_completed,
+      };
+    } catch (error) {
+      // Return null to indicate failed auth - NextAuth will redirect to error page
+      return null;
+    }
+  },
+});
+
 // Determine which provider to use
 function getProviders() {
   const providers = [];
@@ -71,6 +129,10 @@ function getProviders() {
   if (process.env.NODE_ENV === 'development') {
     providers.push(DevCredentialsProvider);
   }
+
+  // Always include local credentials - backend controls whether it's enabled
+  providers.push(LocalCredentialsProvider);
+
   return providers;
 }
 
@@ -104,6 +166,19 @@ export const authOptions: NextAuthOptions = {
 
       // Initial sign in - sync with backend and get API token
       if (user) {
+        // Local credentials provider already obtained the token from the backend
+        if (account?.provider === 'local-credentials' && (user as any).accessToken) {
+          return {
+            ...token,
+            accessToken: (user as any).accessToken,
+            sub: user.id,
+            backendUserId: user.id,
+            isNewUser: (user as any).isNewUser,
+            onboardingCompleted: (user as any).onboardingCompleted,
+          };
+        }
+
+        // OIDC and dev providers - sync with backend
         try {
           const response = await fetch(`${apiUrl}/api/v1/auth/sync`, {
             method: 'POST',

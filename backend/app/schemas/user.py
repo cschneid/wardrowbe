@@ -88,3 +88,15 @@ class AuthConfigOIDC(BaseModel):
 class AuthConfigResponse(BaseModel):
     oidc: AuthConfigOIDC
     dev_mode: bool = False
+    local_auth: bool = False
+
+
+class LocalRegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: str = Field(..., min_length=1, max_length=100)
+
+
+class LocalLoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=1)

@@ -86,14 +86,6 @@ class Settings(BaseSettings):
                 "OIDC is partially configured: both OIDC_ISSUER_URL and OIDC_CLIENT_ID must be set together."
             )
 
-        oidc_configured = oidc_issuer and oidc_client
-        is_dev = self.debug and self.secret_key == DEFAULT_SECRET_KEY
-        if not oidc_configured and not is_dev:
-            return (
-                "No authentication method configured. "
-                "Set OIDC_ISSUER_URL + OIDC_CLIENT_ID, or enable DEBUG mode."
-            )
-
         return None
 
     def get_auth_mode(self) -> str:
@@ -101,7 +93,7 @@ class Settings(BaseSettings):
             return "dev"
         if self.oidc_issuer_url and self.oidc_client_id:
             return "oidc"
-        return "unknown"
+        return "local"
 
 
 @lru_cache

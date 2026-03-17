@@ -14,7 +14,7 @@ function OIDCLoginButton({ callbackUrl }: { callbackUrl: string }) {
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
       </svg>
-      Sign in
+      Sign in with SSO
     </button>
   );
 }
@@ -84,6 +84,126 @@ function DevLogin({ callbackUrl }: { callbackUrl: string }) {
   );
 }
 
+function LocalLogin({ callbackUrl }: { callbackUrl: string }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    const result = await signIn('local-credentials', {
+      email,
+      password,
+      displayName: isRegister ? displayName : undefined,
+      action: isRegister ? 'register' : 'login',
+      redirect: false,
+      callbackUrl,
+    });
+
+    if (result?.error) {
+      setError(isRegister
+        ? 'Registration failed. The email may already be in use, or the password must be at least 8 characters.'
+        : 'Invalid email or password.'
+      );
+      setIsLoading(false);
+    } else if (result?.url) {
+      window.location.href = result.url;
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label htmlFor="local-email" className="block text-sm font-medium">
+          Email
+        </label>
+        <input
+          id="local-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="you@example.com"
+        />
+      </div>
+
+      {isRegister && (
+        <div className="space-y-2">
+          <label htmlFor="local-name" className="block text-sm font-medium">
+            Display Name
+          </label>
+          <input
+            id="local-name"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            required
+            autoComplete="name"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder="Your Name"
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label htmlFor="local-password" className="block text-sm font-medium">
+          Password
+        </label>
+        <input
+          id="local-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={isRegister ? 8 : 1}
+          autoComplete={isRegister ? 'new-password' : 'current-password'}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder={isRegister ? 'Min. 8 characters' : 'Your password'}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {isRegister ? 'Creating account...' : 'Signing in...'}
+          </>
+        ) : (
+          isRegister ? 'Create account' : 'Sign in'
+        )}
+      </button>
+
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={() => { setIsRegister(!isRegister); setError(null); }}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function BackendError({ message }: { message: string }) {
   return (
     <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm space-y-2">
@@ -124,21 +244,36 @@ function LoginContent() {
   // Show sync error from session (e.g. backend returned 503 during login)
   const syncError = session?.syncError;
 
-  // Detect auth mode based on available providers
-  const [authMode, setAuthMode] = useState<'loading' | 'oidc' | 'dev'>('loading');
+  // Detect auth mode from backend config
+  const [authMode, setAuthMode] = useState<'loading' | 'oidc' | 'dev' | 'local'>('loading');
 
   useEffect(() => {
-    getProviders().then((providers) => {
-
-      if (providers?.['oidc']) {
-        setAuthMode('oidc');
-      } else if (providers?.['dev-credentials']) {
-        setAuthMode('dev');
-      } else {
-        // Fallback to dev mode
-        setAuthMode('dev');
-      }
-    });
+    fetch('/api/v1/auth/config')
+      .then((res) => res.json())
+      .then((config) => {
+        if (config.oidc?.enabled) {
+          setAuthMode('oidc');
+        } else if (config.dev_mode) {
+          setAuthMode('dev');
+        } else if (config.local_auth) {
+          setAuthMode('local');
+        } else {
+          // Fallback: check NextAuth providers
+          getProviders().then((providers) => {
+            if (providers?.['local-credentials']) {
+              setAuthMode('local');
+            } else if (providers?.['dev-credentials']) {
+              setAuthMode('dev');
+            } else {
+              setAuthMode('local');
+            }
+          });
+        }
+      })
+      .catch(() => {
+        // Can't reach backend - still try local auth
+        setAuthMode('local');
+      });
   }, []);
 
   if (status === 'loading' || authMode === 'loading') {
@@ -170,7 +305,7 @@ function LoginContent() {
       <div className="space-y-4">
         {authMode === 'oidc' && <OIDCLoginButton callbackUrl={callbackUrl} />}
         {authMode === 'dev' && <DevLogin callbackUrl={callbackUrl} />}
-
+        {authMode === 'local' && <LocalLogin callbackUrl={callbackUrl} />}
       </div>
     </>
   );

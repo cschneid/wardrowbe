@@ -42,6 +42,7 @@ class User(Base):
     location_lon: Mapped[Decimal | None] = mapped_column(Numeric(11, 8))
     location_name: Mapped[str | None] = mapped_column(String(100))
 
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
